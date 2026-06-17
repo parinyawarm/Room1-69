@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรายงานตรวจเช็คอุปกรณ์โสตทัศนูปกรณ์ - คณะการท่องเที่ยวและการโรงแรม มมส.</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f3f4f6;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background-color: white !important;
+                font-size: 12px;
+            }
+            .print-card {
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+                margin-bottom: 10px !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800 flex flex-col min-h-screen">
+
+    <!-- Header Section -->
+    <header class="bg-gradient-to-r from-purple-800 to-indigo-700 text-white shadow-lg no-print">
+        <div class="container mx-auto px-4 py-5 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="bg-white p-2.5 rounded-full shadow-inner">
+                    <span class="text-purple-700 text-3xl font-bold"><i class="fa-solid fa-chalkboard-user"></i></span>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold tracking-wide">ระบบตรวจเช็คอุปกรณ์โสตทัศนูปกรณ์ประจำห้องเรียน</h1>
+                    <p class="text-xs md:text-sm text-purple-100 flex items-center gap-2 mt-0.5">
+                        <i class="fa-solid fa-university"></i> คณะการท่องเที่ยวและการโรงแรม มหาวิทยาลัยมหาสารคาม 
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Interactive Academic Term Controls -->
+            <div class="flex flex-wrap items-center gap-3 bg-purple-950/50 p-2.5 rounded-xl border border-purple-500/30">
+                <div class="flex items-center gap-1.5 text-xs">
+                    <label for="year-input" class="font-semibold text-purple-200">ปีการศึกษา:</label>
+                    <input type="number" id="year-input" onchange="changeTerm()" class="w-20 bg-purple-900/90 text-white border border-purple-500/50 rounded px-2.5 py-1 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-400" value="2569">
+                </div>
+                <div class="flex items-center gap-1.5 text-xs">
+                    <label for="semester-input" class="font-semibold text-purple-200">ภาคเรียน:</label>
+                    <select id="semester-input" onchange="changeTerm()" class="bg-purple-900/90 text-white border border-purple-500/50 rounded px-2.5 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-400">
+                        <option value="1">เทอม 1 (ภาคต้น)</option>
+                        <option value="2">เทอม 2 (ภาคปลาย)</option>
+                        <option value="3">เทอม 3 (ภาคฤดูร้อน)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="window.print()" class="bg-white/20 hover:bg-white/30 text-white font-semibold py-2 px-4 rounded-lg border border-white/40 transition duration-150 flex items-center gap-2 text-sm shadow">
+                    <i class="fa-solid fa-print"></i> พิมพ์รายงาน PDF
+                </button>
+                <button onclick="exportToJSON()" class="bg-purple-950 hover:bg-purple-900 text-white font-semibold py-2 px-4 rounded-lg transition duration-150 flex items-center gap-2 text-sm shadow">
+                    <i class="fa-solid fa-download"></i> ส่งออกข้อมูล (JSON)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-4 py-6">
+        
+        <!-- Active Term Indicator Panel -->
+        <div class="bg-purple-50 border-l-4 border-purple-600 rounded-r-xl p-4 mb-6 flex justify-between items-center shadow-sm no-print">
+            <div class="flex items-center gap-3">
+                <span class="text-purple-700 text-xl"><i class="fa-solid fa-calendar-check"></i></span>
+                <div>
+                    <span class="text-xs text-purple-600 font-bold block">คุณกำลังเปิดดูและปรับปรุงข้อมูลสำหรับ:</span>
+                    <span class="text-base font-bold text-purple-950">ปีการศึกษา <span id="label-active-year">2569</span> — ภาคเรียนที่ <span id="label-active-semester">1</span> (มี 3 เทอมต่อปี)</span>
+                </div>
+            </div>
+            <span class="text-xs bg-purple-200 text-purple-800 font-bold px-3 py-1 rounded-full border border-purple-300">ระบบเก็บประวัติแยกเทอมให้อัตโนมัติ</span>
+        </div>
+
+        <!-- Statistics Section (Overview Cards) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 no-print">
+            
+            <!-- Card 1: Total Rooms Checked -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">ห้องเรียนที่ตรวจเช็คแล้ว</p>
+                    <h3 class="text-2xl font-bold text-gray-800 mt-1" id="stat-rooms-checked">0 / 0 ห้อง</h3>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2.5">
+                        <div id="stat-rooms-bar" class="bg-purple-600 h-1.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="p-3.5 bg-purple-50 text-purple-600 rounded-lg">
+                    <i class="fa-solid fa-door-open text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Devices Normal -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">อุปกรณ์ปกติ</p>
+                    <h3 class="text-2xl font-bold text-emerald-600 mt-1" id="stat-devices-normal">0 เครื่อง</h3>
+                    <p class="text-xs text-gray-500 mt-1.5" id="stat-normal-percent">พร้อมใช้งาน 0%</p>
+                </div>
+                <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <i class="fa-solid fa-circle-check text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Devices Damaged -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">อุปกรณ์แจ้งชำรุด/ต้องซ่อม</p>
+                    <h3 class="text-2xl font-bold text-red-600 mt-1" id="stat-devices-broken">0 เครื่อง</h3>
+                    <p class="text-xs text-gray-500 mt-1.5" id="stat-broken-percent">อัตราชำรุด 0%</p>
+                </div>
+                <div class="p-3.5 bg-red-50 text-red-600 rounded-lg">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Devices Non-existent / No TV -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">ไม่มีในห้อง / ไม่ติดตั้ง</p>
+                    <h3 class="text-2xl font-bold text-purple-650 mt-1" id="stat-devices-none" style="color: #8b5cf6;">0 เครื่อง</h3>
+                    <p class="text-xs text-gray-500 mt-1.5" id="stat-none-percent">ยกเว้น/ไม่ได้ติดตั้ง 0%</p>
+                </div>
+                <div class="p-3.5 bg-purple-50 text-purple-500 rounded-lg">
+                    <i class="fa-solid fa-ban text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print-only Header -->
+        <div class="hidden print-only mb-6 border-b-2 border-purple-700 pb-4 text-center">
+            <h1 class="text-2xl font-bold">รายงานผลการตรวจเช็คอุปกรณ์โสตทัศนูปกรณ์ห้องเรียน</h1>
+            <h2 class="text-lg font-semibold text-gray-600">คณะการท่องเที่ยวและการโรงแรม มหาวิทยาลัยมหาสารคาม</h2>
+            <p class="text-sm text-gray-500 mt-1">ประจำปีการศึกษา/ภาคเรียนที่: เทอม <span id="print-active-semester">1</span>/<span id="print-active-year">2569</span></p>
+        </div>
+
+        <!-- Layout Grid: 1/3 Sidebar for Rooms, 2/3 Main Form and Details -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Sidebar: Room List (Left Column) -->
+            <div class="lg:col-span-4 space-y-4 no-print">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="font-bold text-gray-700 flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-purple-700"></i> รายการห้องเรียนทั้งหมด
+                        </h2>
+                        <span class="text-xs bg-purple-50 text-purple-700 font-bold px-2.5 py-1 rounded-full border border-purple-200" id="badge-total-rooms">เช็คแล้ว 0/0</span>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative mb-3">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="room-search" oninput="filterRooms()" placeholder="ค้นหารหัสห้องเรียน..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition duration-150">
+                    </div>
+
+                    <!-- Room List Container -->
+                    <div class="space-y-1 overflow-y-auto max-h-[420px] pr-1" id="room-list">
+                        <!-- Rooms generated dynamically by Javascript -->
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between">
+                        <button onclick="createNewRoom()" class="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-sm font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition duration-150">
+                            <i class="fa-solid fa-plus-circle"></i> เพิ่มห้องเรียนใหม่
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Status Chart -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <h3 class="font-bold text-gray-700 mb-3 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-purple-700"></i> แผนภูมิแสดงสัดส่วนสถานะอุปกรณ์
+                    </h3>
+                    <div class="relative w-full h-[180px] flex justify-center">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Panel: Equipment Checklist and Logging (Right Column) -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- Current Room Overview / Editing Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden print-card">
+                    
+                    <!-- Card Header -->
+                    <div class="bg-gradient-to-r from-slate-800 to-indigo-950 text-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div class="flex-grow">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="bg-purple-600 text-white font-bold px-3 py-1 rounded-lg text-lg animate-pulse" id="display-room-id">-</span>
+                                <span id="display-room-status" class="bg-emerald-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                    <i class="fa-solid fa-check"></i> ตรวจเช็คแล้ว
+                                </span>
+                                <!-- Delete Room Button -->
+                                <button onclick="deleteCurrentRoom()" class="no-print bg-red-600/80 hover:bg-red-600 text-white text-xs font-semibold py-1 px-2.5 rounded-lg border border-red-500/30 transition duration-150 flex items-center gap-1 shadow">
+                                    <i class="fa-solid fa-trash-can"></i> ลบห้องนี้
+                                </button>
+                            </div>
+                            <p class="text-xs text-slate-300 mt-1 flex items-center gap-1.5">
+                                <i class="fa-solid fa-building"></i> คณะการท่องเที่ยวและการโรงแรม มหาวิทยาลัยมหาสารคาม
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs w-full sm:w-auto justify-end no-print">
+                            <button onclick="openAddDeviceModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 px-3 rounded flex items-center gap-1 transition shadow">
+                                <i class="fa-solid fa-plus-circle"></i> + เพิ่มอุปกรณ์ใหม่
+                            </button>
+                            <button onclick="markAllNormal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1.5 px-3 rounded flex items-center gap-1 transition">
+                                <i class="fa-solid fa-circle-check"></i> เลือกปกติทั้งหมด
+                            </button>
+                            <button onclick="resetCurrentRoom()" class="bg-slate-600 hover:bg-slate-500 text-white font-medium py-1.5 px-3 rounded flex items-center gap-1 transition">
+                                <i class="fa-solid fa-rotate-left"></i> รีเซ็ตห้องนี้
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Checklist Table & Form -->
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
+                                        <th class="py-3 px-4">ชื่ออุปกรณ์โสตฯ</th>
+                                        <th class="py-3 px-4 w-40">หมายเลขครุภัณฑ์</th>
+                                        <th class="py-3 px-4 w-60">สถานะการใช้งาน</th>
+                                        <th class="py-3 px-4">หมายเหตุ / ปัญหาที่พบ</th>
+                                        <th class="py-3 px-4 w-12 text-center no-print">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="checklist-rows" class="divide-y divide-gray-100">
+                                    <!-- Dynamic Rows Rendered by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Inspector Details section -->
+                        <div class="mt-6 pt-5 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-600 mb-1.5">ผู้ตรวจเช็คโสตทัศนูปกรณ์</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                        <i class="fa-solid fa-user-check text-purple-500"></i>
+                                    </span>
+                                    <input type="text" id="inspector-name" oninput="updateRoomMetadata()" placeholder="ระบุชื่อผู้ตรวจเช็ค (เช่น นายสมชาย ใจดี)" class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-purple-500 focus:border-purple-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-600 mb-1.5">วันที่และเวลาตรวจเช็คล่าสุด</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                        <i class="fa-solid fa-calendar-alt text-purple-500"></i>
+                                    </span>
+                                    <input type="datetime-local" id="inspection-date" onchange="updateRoomMetadata()" class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-purple-500 focus:border-purple-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Print Only Sign-off Section -->
+                        <div class="hidden print-only mt-10 grid grid-cols-2 gap-8 text-center text-xs">
+                            <div class="pt-8 border-t border-gray-300">
+                                <p class="font-medium">ลงชื่อ.............................................................. ผู้ตรวจเช็ค</p>
+                                <p class="text-gray-500 mt-1">( <span id="print-inspector-name">..............................................................</span> )</p>
+                                <p class="text-gray-500 mt-0.5">ตำแหน่ง เจ้าหน้าที่โสตทัศนศึกษา</p>
+                            </div>
+                            <div class="pt-8 border-t border-gray-300">
+                                <p class="font-medium">ลงชื่อ.............................................................. ผู้รับทราบ/หัวหน้างาน</p>
+                                <p class="text-gray-500 mt-1">(..............................................................)</p>
+                                <p class="text-gray-500 mt-0.5">ผู้อำนวยการกอง/หัวหน้างานอาคารสถานที่</p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons at bottom -->
+                        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 no-print border-t border-gray-100 pt-5">
+                            <div id="save-status-msg" class="text-sm font-semibold flex items-center gap-2 text-emerald-600 opacity-0 transition-opacity duration-300">
+                                <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลห้องนี้ลงในคลังแดชบอร์ดอัตโนมัติแล้ว!
+                            </div>
+                            <div class="flex gap-2 w-full sm:w-auto justify-end">
+                                <button onclick="saveAndGoNext()" class="w-full sm:w-auto bg-purple-700 hover:bg-purple-800 text-white font-semibold py-2.5 px-5 rounded-lg text-sm transition duration-150 flex items-center justify-center gap-2 shadow">
+                                    บันทึกผลและไปห้องถัดไป <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Complete Summary Report Section -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 print-card">
+                    <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice text-purple-700"></i> ตารางรายงานสถานะสรุปทุกห้องเรียน (ข้อมูลนำเข้าทั้งหมด)
+                    </h2>
+                    <p class="text-xs text-gray-500 mb-4">* สามารถเพิ่มอุปกรณ์อื่นนอกเหนือจากคอมพิวเตอร์ เครื่องเสียง ไมโครโฟน โปรเจคเตอร์ และทีวีได้</p>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse text-gray-600">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-200" id="summary-table-header">
+                                    <!-- Dynamic header cells generated by JS based on all unique devices in state -->
+                                </tr>
+                            </thead>
+                            <tbody id="summary-table-body" class="divide-y divide-gray-100">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+    </main>
+
+    <!-- Custom Modal for adding a new Room -->
+    <div id="new-room-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden no-print">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 mx-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-1.5 flex items-center gap-2">
+                <i class="fa-solid fa-plus text-purple-700"></i> เพิ่มห้องเรียนใหม่เข้าระบบ
+            </h3>
+            <p class="text-xs text-gray-500 mb-4">ระบุหมายเลขห้องเรียนที่ต้องการเพิ่ม เช่น TH1-403, TH1-501</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">รหัสห้องเรียน</label>
+                    <input type="text" id="new-room-id-input" placeholder="ตัวอย่าง: TH1-403" class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm uppercase focus:ring-purple-500 focus:border-purple-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeNewRoomModal()" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition duration-150">ยกเลิก</button>
+                <button onclick="submitNewRoom()" class="px-4 py-2 text-sm font-semibold text-white bg-purple-700 hover:bg-purple-800 rounded-lg transition duration-150">ตกลงเพิ่มห้อง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for adding a new DEVICE to current room -->
+    <div id="new-device-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden no-print">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 mx-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-1.5 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-purple-700"></i> เพิ่มอุปกรณ์ใหม่ในห้อง <span id="add-device-room-label" class="text-purple-600 font-bold"></span>
+            </h3>
+            <p class="text-xs text-gray-500 mb-4">ระบุชื่อเรียกของโสตทัศนูปกรณ์ที่ต้องการเพิ่มเติม</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">ชื่ออุปกรณ์</label>
+                    <input type="text" id="new-device-name-input" placeholder="ตัวอย่าง: จอ Interactive, เครื่องฉาย 3 มิติ, ไมค์ครอบหัว" class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">หมายเลขครุภัณฑ์ (ไม่บังคับ)</label>
+                    <input type="text" id="new-device-serial-input" placeholder="ตัวอย่าง: INT-TH1-01" class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:ring-purple-500 focus:border-purple-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <button onclick="closeAddDeviceModal()" class="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition duration-150">ยกเลิก</button>
+                <button onclick="submitNewDevice()" class="px-4 py-2 text-sm font-semibold text-white bg-purple-700 hover:bg-purple-800 rounded-lg transition duration-150">ตกลงเพิ่มอุปกรณ์</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white text-sm py-3 px-5 rounded-lg shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 no-print">
+        <span id="toast-icon" class="text-emerald-400"><i class="fa-solid fa-circle-check"></i></span>
+        <span id="toast-message">บันทึกข้อมูลแล้ว</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-slate-400 py-6 text-center text-xs mt-12 border-t border-gray-700 no-print">
+        <p>© 2026 คณะการท่องเที่ยวและการโรงแรม มหาวิทยาลัยมหาสารคาม</p>
+        <p class="mt-1 text-slate-500">ระบบแดชบอร์ดตรวจเช็คสถานะโสตทัศนศึกษา พัฒนาเป็นระบบแบบ Single-File Web Application ปลอดภัย สะดวก และออฟไลน์ 100%</p>
+    </footer>
+
+    <!-- App State and Interaction Scripts -->
+    <script>
+        // Real initial template parsed from your latest Excel file upload
+        const initialRoomsTemplate = {
+          "TH1-402": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020003-69200002", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030042-6520001", "remark": "ใช้งานไป 369 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "TH1-403": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "", "remark": "" }
+            }
+          },
+          "TH1-501": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-62200021", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020023-5620002", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟนไร้สาย": { "status": "ปกติ", "serial": "0200200-030797-5320001", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030816-6120009", "remark": "ใช้งานไป 1697 ชั่วโมง" },
+              "TV": { "status": "ปกติ", "serial": "90401001-230490-6220007, 90401001-230490-6220008", "remark": "" }
+            }
+          },
+          "TH1-502": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-622000075", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020023-5620001", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟนไร้สาย": { "status": "ปกติ", "serial": "0200200-030797-5320003", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030816-6120010", "remark": "ใช้งานไป 1548 ชั่วโมง" },
+              "TV": { "status": "ปกติ", "serial": "90401001-230490-6220005, 90401001-230490-6220006", "remark": "" }
+            }
+          },
+          "TH1-503": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020003-69200004", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "90401001-020018-6520002", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030816-6120001", "remark": "ใช้งานไป 1251 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "TH1-601": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620004", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020023-5620004", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "", "remark": "ใช้งานไป 1276 ชั่วโมง" },
+              "TV": { "status": "ปกติ", "serial": "90401001-230490-6220003, 90401001-230490-6220004", "remark": "" }
+            }
+          },
+          "TH1-602": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620012", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "90401001-020018-6520003", "remark": "" },
+              "ไมโครโฟนไร้สาย": { "status": "ปกติ", "serial": "0200200-030797-5320005", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030816-6120005", "remark": "ใช้งานไป 853 ชั่วโมง" },
+              "TV": { "status": "ปกติ", "serial": "90401001-230490-6220001, 90401001-230490-6220002", "remark": "" }
+            }
+          },
+          "TH1-603": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620011", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "90401001-020018-6520004, 90401001-020018-6520005", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030816-6120002", "remark": "ใช้งานไป 964 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "TH1-ชั้น7": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620001", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-030051-68200003", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟนไร้สาย": { "status": "ปกติ", "serial": "0200200-030797-5320008", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ไม่มีโปรเจคเตอร์", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "90401001-030044-6520001", "remark": "" }
+            }
+          },
+          "TH2-107": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620016", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-230918-6120007", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90400000-62491-632000010", "remark": "ใช้งานไป 1424 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "TH3-102": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620036", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-230918-6120001", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90400000-62491-632000004", "remark": "ใช้งานไป 1329 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "TH3-103": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620018", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90400000-62491-632000009", "remark": "ใช้งานไป 1268 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "TH3-105": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620080", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020003-69200001", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030042-69200002", "remark": "ใช้งานไป 0 ชั่วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "ROOM 1": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620005", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020023-5620005", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ไม่มีโปรเจคเตอร์", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "90401001-030043-6620001", "remark": "" }
+            }
+          },
+          "ROOM 2": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620003", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ไม่มีโปรเจคเตอร์", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "90401001-030043-6620002", "remark": "" }
+            }
+          },
+          "ROOM 3": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620006", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "90401001-020018-6520006", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ไม่มีโปรเจคเตอร์", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "90401001-030044-6620002", "remark": "" }
+            }
+          },
+          "ROOM 4": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-622000038", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-020023-5620006", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ไม่มีโปรเจคเตอร์", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "90401001-030044-6620001", "remark": "" }
+            }
+          },
+          "ROOM 5": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ไม่มีโปรเจคเตอร์", "serial": "", "remark": "" },
+              "TV": { "status": "ปกติ", "serial": "90401001-030044-6620003", "remark": "" }
+            }
+          },
+          "RN-302": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620002", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "ใช้งานไป 2112 ชั้วโมง" }
+            }
+          },
+          "RN-303": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620013", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-230918-6120010", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030042-69200005", "remark": "ใช้งานไป 224 ชั้วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "RN-304": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-230918-6120004", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90401001-030816-6120008", "remark": "ใช้งานไป 2305 ชั้วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "RN-307": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620010", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "90401001-230918-6120008", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90400000-62491-632000008", "remark": "ใช้งานไป 920 ชั้วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          },
+          "RN-308": {
+            "checked": true,
+            "inspector": "ปริญญา ศิริมนตรี",
+            "date": "2026-05-20T10:00",
+            "devices": {
+              "คอมพิวเตอร์": { "status": "ปกติ", "serial": "90401001-070001-6620009", "remark": "" },
+              "เครื่องเสียง": { "status": "ปกติ", "serial": "", "remark": "" },
+              "ไมโครโฟน": { "status": "ปกติ", "serial": "", "remark": "" },
+              "โปรเจคเตอร์": { "status": "ปกติ", "serial": "90400000-62491-63200005", "remark": "ใช้งานไป 1418 ชั้วโมง" },
+              "TV": { "status": "ไม่มี TV", "serial": "", "remark": "" }
+            }
+          }
+        };
+
+        // App State Structure with Multi-Term capability
+        let appState = {
+            currentYear: "2569",
+            currentSemester: "1",
+            currentRoom: "TH1-402",
+            filterText: "",
+            rooms: {}, // Will point to active loaded term
+            termData: {} // Will store records as key "year-semester"
+        };
+
+        // Pre-fill fallback if localStorage is empty
+        appState.termData["2569-1"] = {
+            rooms: JSON.parse(JSON.stringify(initialRoomsTemplate))
+        };
+        appState.rooms = JSON.parse(JSON.stringify(initialRoomsTemplate));
+
+        // FORCE RESET OLD LOCALSTORAGE TO UPDATE USER DATA REAL-TIME
+        // We use a new key "av_dashboard_state_v4" to bypass browser cache
+        const storedState = localStorage.getItem('av_dashboard_state_v4');
+        if (storedState) {
+            try {
+                const parsed = JSON.parse(storedState);
+                if (parsed.termData && Object.keys(parsed.termData).length > 0) {
+                    appState = parsed;
+                }
+            } catch(e) {
+                console.log("Could not parse saved state, starting fresh", e);
+            }
+        } else {
+            // First time loading v4, automatically save initial rooms to localStorage
+            localStorage.setItem('av_dashboard_state_v4', JSON.stringify(appState));
+        }
+
+        let statusChart = null;
+
+        window.onload = function() {
+            // Apply year & semester settings to input controls
+            document.getElementById("year-input").value = appState.currentYear;
+            document.getElementById("semester-input").value = appState.currentSemester;
+
+            updateActiveTermLabels();
+
+            if (Object.keys(appState.rooms).length > 0) {
+                if (!appState.rooms[appState.currentRoom]) {
+                    appState.currentRoom = Object.keys(appState.rooms).sort()[0];
+                }
+                
+                if (appState.rooms[appState.currentRoom] && !appState.rooms[appState.currentRoom].date) {
+                    const now = new Date();
+                    const offset = now.getTimezoneOffset() * 60000;
+                    const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+                    appState.rooms[appState.currentRoom].date = localISOTime;
+                }
+            }
+            
+            renderRooms();
+            renderChecklist();
+            renderSummaryTable();
+            updateStatistics();
+            initChart();
+        };
+
+        // Update active metadata and indicators on HUD
+        function updateActiveTermLabels() {
+            const y = appState.currentYear;
+            const s = appState.currentSemester;
+
+            document.getElementById("label-active-year").innerText = y;
+            document.getElementById("label-active-semester").innerText = s;
+
+            // For printable header
+            document.getElementById("print-active-year").innerText = y;
+            document.getElementById("print-active-semester").innerText = s;
+        }
+
+        // Handle Change Year/Semester Interaction
+        function changeTerm() {
+            // 1. Save current active room state to current term key before switching
+            const oldKey = `${appState.currentYear}-${appState.currentSemester}`;
+            appState.termData[oldKey] = {
+                rooms: JSON.parse(JSON.stringify(appState.rooms))
+            };
+
+            // 2. Fetch new values from header inputs
+            const newYear = document.getElementById("year-input").value.trim() || "2569";
+            const newSemester = document.getElementById("semester-input").value;
+
+            appState.currentYear = newYear;
+            appState.currentSemester = newSemester;
+
+            const newKey = `${newYear}-${newSemester}`;
+
+            // 3. Load from database OR spawn a fresh inherited database (keeping room list + hardware serials)
+            if (appState.termData[newKey]) {
+                appState.rooms = JSON.parse(JSON.stringify(appState.termData[newKey].rooms));
+                showToast(`โหลดประวัติการตรวจเช็ค ปี ${newYear} เทอม ${newSemester} เรียบร้อย`, "success");
+            } else {
+                // Spawn a new term structure: We inherit previous room ids, device names, and serial numbers
+                const newSet = {};
+                const blueprint = Object.keys(appState.rooms).length > 0 ? appState.rooms : initialRoomsTemplate;
+
+                Object.keys(blueprint).forEach(roomId => {
+                    const roomBlueprint = blueprint[roomId];
+                    newSet[roomId] = {
+                        checked: false,
+                        inspector: "",
+                        date: "",
+                        devices: {}
+                    };
+
+                    Object.keys(roomBlueprint.devices).forEach(devName => {
+                        newSet[roomId].devices[devName] = {
+                            status: "", // clean slate
+                            serial: roomBlueprint.devices[devName].serial || "", // keep physical serial
+                            remark: "" // clean slate
+                        };
+                    });
+                });
+
+                appState.termData[newKey] = {
+                    rooms: newSet
+                };
+                appState.rooms = newSet;
+                showToast(`เริ่มบันทึกตรวจโสตฯ รอบใหม่: ปี ${newYear} เทอม ${newSemester}`, "success");
+            }
+
+            // Select first available room
+            const sorted = Object.keys(appState.rooms).sort();
+            appState.currentRoom = sorted.length > 0 ? sorted[0] : "";
+
+            updateActiveTermLabels();
+            saveState();
+            renderRooms();
+            renderChecklist();
+            renderSummaryTable();
+            updateStatistics();
+            updateChartData();
+        }
+
+        // Render Room List Sidebar
+        function renderRooms() {
+            const listEl = document.getElementById("room-list");
+            listEl.innerHTML = "";
+            let checkedCount = 0;
+            const totalRooms = Object.keys(appState.rooms).length;
+
+            if (totalRooms === 0) {
+                listEl.innerHTML = `<p class="text-xs text-center text-gray-400 py-4">ไม่มีห้องเรียนในระบบ กรุณากดปุ่มเพิ่มห้องใหม่</p>`;
+                document.getElementById("badge-total-rooms").innerText = `เช็คแล้ว 0/0`;
+                return;
+            }
+
+            Object.keys(appState.rooms).sort().forEach(roomId => {
+                const room = appState.rooms[roomId];
+                if (room.checked) checkedCount++;
+
+                if (appState.filterText && !roomId.toLowerCase().includes(appState.filterText.toLowerCase())) {
+                    return;
+                }
+
+                const isActive = roomId === appState.currentRoom;
+                
+                let roomBadgeColor = "bg-gray-100 text-gray-500";
+                let roomBadgeText = "ยังไม่ตรวจ";
+                let hasBroken = false;
+                
+                Object.values(room.devices).forEach(d => {
+                    if (d.status === 'ชำรุด') hasBroken = true;
+                });
+
+                if (room.checked) {
+                    if (hasBroken) {
+                        roomBadgeColor = "bg-red-100 text-red-700 border border-red-200";
+                        roomBadgeText = "พบเครื่องชำรุด";
+                    } else {
+                        roomBadgeColor = "bg-purple-100 text-purple-800 border border-purple-200";
+                        roomBadgeText = "ตรวจแล้ว/ปกติ";
+                    }
+                }
+
+                const roomBtn = document.createElement("button");
+                roomBtn.onclick = () => selectRoom(roomId);
+                roomBtn.className = `w-full text-left p-3 rounded-lg flex items-center justify-between transition duration-150 ${
+                    isActive 
+                        ? "bg-purple-600 text-white shadow-md font-semibold transform scale-[1.01]" 
+                        : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+                }`;
+
+                roomBtn.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-door-closed ${isActive ? 'text-white' : 'text-purple-700'} text-lg"></i>
+                        <div>
+                            <span class="block text-sm font-bold ${isActive ? 'text-white' : 'text-gray-800'}">${roomId}</span>
+                            <span class="text-[10px] block ${isActive ? 'text-purple-100' : 'text-gray-400'}">${room.inspector ? 'ผู้เช็ค: ' + room.inspector : 'ยังไม่มีผู้ตรวจสอบ'}</span>
+                        </div>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${isActive ? 'bg-white/30 text-white' : roomBadgeColor}">
+                        ${roomBadgeText}
+                    </span>
+                `;
+                listEl.appendChild(roomBtn);
+            });
+
+            document.getElementById("badge-total-rooms").innerText = `เช็คแล้ว ${checkedCount}/${totalRooms}`;
+        }
+
+        // Render device rows for current selected room
+        function renderChecklist() {
+            const currentRoomId = appState.currentRoom;
+            
+            if (!currentRoomId || !appState.rooms[currentRoomId]) {
+                document.getElementById("display-room-id").innerText = "ไม่มีข้อมูล";
+                document.getElementById("checklist-rows").innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-sm text-gray-400">กรุณาเลือกหรือเพิ่มห้องเรียนด้านซ้ายเพื่อดำเนินการต่อ</td>
+                    </tr>
+                `;
+                document.getElementById("inspector-name").value = "";
+                document.getElementById("inspection-date").value = "";
+                return;
+            }
+
+            const room = appState.rooms[currentRoomId];
+            
+            document.getElementById("display-room-id").innerText = currentRoomId;
+            document.getElementById("inspector-name").value = room.inspector || "";
+            document.getElementById("inspection-date").value = room.date || "";
+
+            document.getElementById("print-inspector-name").innerText = room.inspector || "ยังไม่ได้ตรวจเช็ค";
+
+            const badgeStatus = document.getElementById("display-room-status");
+            if (room.checked) {
+                const isBroken = Object.values(room.devices).some(d => d.status === "ชำรุด");
+                if (isBroken) {
+                    badgeStatus.className = "bg-red-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1";
+                    badgeStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> พบปัญหา/ชำรุด`;
+                } else {
+                    badgeStatus.className = "bg-emerald-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1";
+                    badgeStatus.innerHTML = `<i class="fa-solid fa-check-double"></i> ตรวจเช็คแล้ว (ปกติ)`;
+                }
+            } else {
+                badgeStatus.className = "bg-slate-400 text-white text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1";
+                badgeStatus.innerHTML = `<i class="fa-solid fa-clock"></i> รอการตรวจเช็ค`;
+            }
+
+            const tbody = document.getElementById("checklist-rows");
+            tbody.innerHTML = "";
+
+            const deviceNames = Object.keys(room.devices);
+
+            if (deviceNames.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-sm text-gray-400">ยังไม่มีอุปกรณ์ในห้องนี้ กดปุ่ม "+ เพิ่มอุปกรณ์ใหม่" ด้านขวาบนได้ทันที</td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            deviceNames.forEach(devName => {
+                const device = room.devices[devName];
+
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50 transition duration-150";
+
+                row.innerHTML = `
+                    <td class="py-4 px-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-700 font-semibold text-sm">${devName}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4">
+                        <input type="text" value="${device.serial || ''}" 
+                            placeholder="ครุภัณฑ์..." 
+                            oninput="updateDeviceField('${devName}', 'serial', this.value)" 
+                            class="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:border-purple-500 focus:outline-none no-print">
+                        <span class="hidden print-only text-xs">${device.serial || '-'}</span>
+                    </td>
+                    <td class="py-4 px-4">
+                        <div class="flex gap-1.5 no-print">
+                            <button onclick="setDeviceStatus('${devName}', 'ปกติ')" 
+                                class="flex-1 py-1 px-2 rounded text-xs font-medium text-center transition border ${
+                                    device.status === 'ปกติ' 
+                                        ? 'bg-emerald-500 text-white border-emerald-600 font-bold' 
+                                        : 'bg-white text-gray-600 hover:bg-slate-100 border-gray-300'
+                                }">
+                                <i class="fa-solid fa-check-circle"></i> ปกติ
+                            </button>
+                            <button onclick="setDeviceStatus('${devName}', 'ชำรุด')" 
+                                class="flex-1 py-1 px-2 rounded text-xs font-medium text-center transition border ${
+                                    device.status === 'ชำรุด' 
+                                        ? 'bg-red-500 text-white border-red-600 font-bold' 
+                                        : 'bg-white text-gray-600 hover:bg-slate-100 border-gray-300'
+                                }">
+                                <i class="fa-solid fa-times-circle"></i> ชำรุด
+                            </button>
+                            <button onclick="setDeviceStatus('${devName}', 'ไม่มีอุปกรณ์')" 
+                                class="flex-1 py-1 px-2 rounded text-[10px] font-medium text-center transition border ${
+                                    device.status === 'ไม่มีอุปกรณ์' || device.status === 'ไม่มี TV'
+                                        ? 'bg-indigo-600 text-white border-indigo-700 font-bold' 
+                                        : 'bg-white text-gray-600 hover:bg-slate-100 border-gray-300'
+                                }">
+                                <i class="fa-solid fa-ban"></i> ไม่มี
+                            </button>
+                        </div>
+                        <span class="hidden print-only text-xs font-bold ${
+                            device.status === 'ปกติ' ? 'text-emerald-600' : (device.status === 'ชำรุด' ? 'text-red-600' : 'text-indigo-600')
+                        }">${device.status || 'ยังไม่ระบุ'}</span>
+                    </td>
+                    <td class="py-4 px-4">
+                        <input type="text" value="${device.remark || ''}" 
+                            placeholder="ระบุอาการชำรุด หรือข้อมูลเพิ่มเติม..." 
+                            oninput="updateDeviceField('${devName}', 'remark', this.value)" 
+                            class="w-full text-xs border border-gray-300 rounded px-2.5 py-1.5 focus:border-purple-500 focus:outline-none no-print">
+                        <span class="hidden print-only text-xs text-red-500">${device.remark || '-'}</span>
+                    </td>
+                    <!-- Delete Device Column -->
+                    <td class="py-4 px-4 text-center no-print">
+                        <button onclick="deleteDevice('${devName}')" class="text-red-400 hover:text-red-600 transition" title="ลบอุปกรณ์ชิ้นนี้">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Render Summary Grid dynamically based on active devices
+        function renderSummaryTable() {
+            const headerRow = document.getElementById("summary-table-header");
+            const tbody = document.getElementById("summary-table-body");
+            
+            headerRow.innerHTML = "";
+            tbody.innerHTML = "";
+
+            // Find all unique devices across all rooms in the CURRENT active year-semester
+            let uniqueDevices = new Set();
+            Object.values(appState.rooms).forEach(room => {
+                Object.keys(room.devices).forEach(devName => {
+                    uniqueDevices.add(devName);
+                });
+            });
+
+            const standardOrder = ["คอมพิวเตอร์", "เครื่องเสียง", "ไมโครโฟน", "โปรเจคเตอร์", "TV", "ไมโครโฟนไร้สาย"];
+            let sortedDevices = Array.from(uniqueDevices).sort((a, b) => {
+                let indexA = standardOrder.indexOf(a);
+                let indexB = standardOrder.indexOf(b);
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                if (indexA !== -1) return -1;
+                if (indexB !== -1) return 1;
+                return a.localeCompare(b);
+            });
+
+            // Render Header Cells
+            const thRoom = document.createElement("th");
+            thRoom.className = "py-2.5 px-3 font-semibold w-24";
+            thRoom.innerText = "รหัสห้องเรียน";
+            headerRow.appendChild(thRoom);
+
+            sortedDevices.forEach(dev => {
+                const thDev = document.createElement("th");
+                thDev.className = "py-2.5 px-3 font-semibold min-w-[100px]";
+                thDev.innerText = dev;
+                headerRow.appendChild(thDev);
+            });
+
+            const thInspector = document.createElement("th");
+            thInspector.className = "py-2.5 px-3 font-semibold w-28";
+            thInspector.innerText = "ผู้ตรวจ / วันที่";
+            headerRow.appendChild(thInspector);
+
+            const thOverall = document.createElement("th");
+            thOverall.className = "py-2.5 px-3 font-semibold text-center w-20";
+            thOverall.innerText = "ภาพรวม";
+            headerRow.appendChild(thOverall);
+
+            // Render Row Items
+            if (Object.keys(appState.rooms).length === 0) {
+                const trEmpty = document.createElement("tr");
+                trEmpty.innerHTML = `<td colspan="${sortedDevices.length + 3}" class="py-4 text-center text-gray-400">ไม่มีข้อมูลห้องเรียน</td>`;
+                tbody.appendChild(trEmpty);
+                return;
+            }
+
+            Object.keys(appState.rooms).sort().forEach(roomId => {
+                const room = appState.rooms[roomId];
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-slate-50 transition duration-150 cursor-pointer border-b border-slate-100";
+                
+                tr.onclick = (e) => {
+                    if (e.target.tagName !== "BUTTON" && e.target.tagName !== "I" && e.target.tagName !== "INPUT") {
+                        selectRoom(roomId);
+                    }
+                };
+
+                // Room ID TD
+                let roomTd = `<td class="py-3 px-3 font-bold text-slate-800">${roomId}</td>`;
+                tr.innerHTML += roomTd;
+
+                // Devices Status TD
+                sortedDevices.forEach(devName => {
+                    const dev = room.devices[devName];
+                    let devCell = "";
+                    if (!dev) {
+                        devCell = `<td class="py-3 px-3"><span class="text-gray-300">-</span></td>`;
+                    } else if (!room.checked || !dev.status) {
+                        devCell = `<td class="py-3 px-3"><span class="text-slate-400 font-medium">รอตรวจ</span></td>`;
+                    } else if (dev.status === "ปกติ") {
+                        devCell = `<td class="py-3 px-3"><span class="text-emerald-600 font-semibold flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> ปกติ</span></td>`;
+                    } else if (dev.status === "ชำรุด") {
+                        devCell = `<td class="py-3 px-3"><span class="text-red-600 font-semibold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-150"><i class="fa-solid fa-triangle-exclamation animate-bounce"></i> ชำรุด</span></td>`;
+                    } else {
+                        devCell = `<td class="py-3 px-3"><span class="text-slate-400 flex items-center gap-1"><i class="fa-solid fa-minus"></i> ไม่มี</span></td>`;
+                    }
+                    tr.innerHTML += devCell;
+                });
+
+                // Date display TD
+                let dateDisplay = "ยังไม่ระบุ";
+                if (room.date) {
+                    const dateObj = new Date(room.date);
+                    dateDisplay = dateObj.toLocaleDateString('th-TH', {day: 'numeric', month: 'short', year: '2-digit'}) + " " + dateObj.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+                }
+                let metaTd = `
+                    <td class="py-3 px-3 text-[10px] text-gray-500">
+                        <span class="block font-medium text-slate-700">${room.inspector || '-'}</span>
+                        <span>${dateDisplay}</span>
+                    </td>
+                `;
+                tr.innerHTML += metaTd;
+
+                // Overall Badge TD
+                let overallBadge = `<span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-bold">รอการตรวจ</span>`;
+                if (room.checked) {
+                    const hasBroken = Object.values(room.devices).some(d => d.status === "ชำรุด");
+                    overallBadge = hasBroken 
+                        ? `<span class="bg-red-100 text-red-700 border border-red-200 text-[10px] px-2 py-0.5 rounded-full font-bold">ชำรุด</span>`
+                        : `<span class="bg-purple-100 text-purple-800 border border-purple-200 text-[10px] px-2 py-0.5 rounded-full font-bold">สมบูรณ์</span>`;
+                }
+                tr.innerHTML += `<td class="py-3 px-3 text-center">${overallBadge}</td>`;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectRoom(roomId) {
+            appState.currentRoom = roomId;
+            
+            if (appState.rooms[roomId] && !appState.rooms[roomId].date) {
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+                appState.rooms[roomId].date = localISOTime;
+            }
+
+            renderRooms();
+            renderChecklist();
+            if (window.innerWidth < 1024) {
+                document.getElementById("display-room-id").scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function setDeviceStatus(deviceName, status) {
+            const room = appState.rooms[appState.currentRoom];
+            
+            room.checked = true;
+            room.devices[deviceName].status = status;
+
+            if (!room.date) {
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+                room.date = localISOTime;
+            }
+
+            if (!room.inspector) {
+                room.inspector = "ปริญญา ศิริมนตรี";
+            }
+
+            saveState();
+            renderRooms();
+            renderChecklist();
+            renderSummaryTable();
+            updateStatistics();
+            updateChartData();
+            triggerSaveBanner();
+        }
+
+        function updateDeviceField(deviceName, fieldName, value) {
+            const room = appState.rooms[appState.currentRoom];
+            if (room && room.devices[deviceName]) {
+                room.devices[deviceName][fieldName] = value;
+                saveState();
+                renderSummaryTable();
+            }
+        }
+
+        function updateRoomMetadata() {
+            const room = appState.rooms[appState.currentRoom];
+            if (room) {
+                room.inspector = document.getElementById("inspector-name").value;
+                room.date = document.getElementById("inspection-date").value;
+                document.getElementById("print-inspector-name").innerText = room.inspector || "..............................................................";
+                saveState();
+                renderRooms();
+                renderSummaryTable();
+            }
+        }
+
+        function markAllNormal() {
+            const room = appState.rooms[appState.currentRoom];
+            if (!room) return;
+            room.checked = true;
+            Object.keys(room.devices).forEach(devName => {
+                if (devName === "TV") {
+                    room.devices[devName].status = "ไม่มี TV";
+                } else {
+                    room.devices[devName].status = "ปกติ";
+                }
+            });
+
+            if (!room.inspector) {
+                room.inspector = "ปริญญา ศิริมนตรี";
+            }
+            const now = new Date();
+            const offset = now.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+            room.date = localISOTime;
+
+            saveState();
+            renderRooms();
+            renderChecklist();
+            renderSummaryTable();
+            updateStatistics();
+            updateChartData();
+            showToast("สลับสถานะทั้งหมดในห้องนี้เป็น 'ปกติ' เรียบร้อย");
+        }
+
+        function resetCurrentRoom() {
+            const room = appState.rooms[appState.currentRoom];
+            if (!room) return;
+            room.checked = false;
+            room.inspector = "";
+            room.date = "";
+            Object.keys(room.devices).forEach(devName => {
+                room.devices[devName].status = "";
+                room.devices[devName].serial = "";
+                room.devices[devName].remark = "";
+            });
+
+            saveState();
+            renderRooms();
+            renderChecklist();
+            renderSummaryTable();
+            updateStatistics();
+            updateChartData();
+            showToast("รีเซ็ตค่าห้องเรียน " + appState.currentRoom + " เรียบร้อย");
+        }
+
+        function deleteCurrentRoom() {
+            const roomId = appState.currentRoom;
+            if (!roomId || !appState.rooms[roomId]) return;
+
+            if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบห้องเรียน "${roomId}" ออกจากระบบแดชบอร์ด? การดำเนินการนี้จะลบประวัติทั้งหมดของห้องนี้และไม่สามารถกู้คืนได้`)) {
+                delete appState.rooms[roomId];
+                
+                const remainingRooms = Object.keys(appState.rooms).sort();
+                appState.currentRoom = remainingRooms.length > 0 ? remainingRooms[0] : "";
+                
+                saveState();
+                renderRooms();
+                renderChecklist();
+                renderSummaryTable();
+                updateStatistics();
+                updateChartData();
+                showToast(`ลบห้องเรียน ${roomId} ออกจากระบบเรียบร้อยแล้ว`, "error");
+            }
+        }
+
+        function deleteDevice(deviceName) {
+            const roomId = appState.currentRoom;
+            if (!roomId || !appState.rooms[roomId]) return;
+
+            if (confirm(`ต้องการลบอุปกรณ์ "${deviceName}" ออกจากห้อง ${roomId} ใช่หรือไม่?`)) {
+                delete appState.rooms[roomId].devices[deviceName];
+                
+                saveState();
+                renderChecklist();
+                renderSummaryTable();
+                updateStatistics();
+                updateChartData();
+                showToast(`ลบอุปกรณ์ ${deviceName} เรียบร้อย`);
+            }
+        }
+
+        function createNewRoom() {
+            document.getElementById("new-room-id-input").value = "";
+            document.getElementById("new-room-modal").classList.remove("hidden");
+        }
+
+        function closeNewRoomModal() {
+            document.getElementById("new-room-modal").classList.add("hidden");
+        }
+
+        function submitNewRoom() {
+            const rawId = document.getElementById("new-room-id-input").value.trim();
+            const roomId = rawId.toUpperCase();
+            
+            if (!roomId) {
+                showToast("กรุณากรอกรหัสห้องเรียน", "error");
+                return;
+            }
+
+            if (appState.rooms[roomId]) {
+                showToast("ห้องเรียน " + roomId + " มีอยู่ในระบบแล้ว", "error");
+                return;
+            }
+
+            appState.rooms[roomId] = {
+                checked: false,
+                inspector: "",
+                date: "",
+                devices: {
+                    "คอมพิวเตอร์": { "status": "", "serial": "", "remark": "" },
+                    "เครื่องเสียง": { "status": "", "serial": "", "remark": "" },
+                    "ไมโครโฟน": { "status": "", "serial": "", "remark": "" },
+                    "โปรเจคเตอร์": { "status": "", "serial": "", "remark": "" },
+                    "TV": { "status": "", "serial": "", "remark": "" }
+                }
+            };
+
+            saveState();
+            closeNewRoomModal();
+            selectRoom(roomId);
+            renderSummaryTable();
+            updateStatistics();
+            updateChartData();
+            showToast("เพิ่มห้องเรียน " + roomId + " สำเร็จ");
+        }
+
+        function openAddDeviceModal() {
+            const roomId = appState.currentRoom;
+            if (!roomId || !appState.rooms[roomId]) {
+                showToast("กรุณาเลือกหรือเพิ่มห้องเรียนก่อน", "error");
+                return;
+            }
+            document.getElementById("add-device-room-label").innerText = roomId;
+            document.getElementById("new-device-name-input").value = "";
+            document.getElementById("new-device-serial-input").value = "";
+            document.getElementById("new-device-modal").classList.remove("hidden");
+        }
+
+        function closeAddDeviceModal() {
+            document.getElementById("new-device-modal").classList.add("hidden");
+        }
+
+        function submitNewDevice() {
+            const roomId = appState.currentRoom;
+            const deviceName = document.getElementById("new-device-name-input").value.trim();
+            const serialNum = document.getElementById("new-device-serial-input").value.trim();
+
+            if (!deviceName) {
+                showToast("กรุณากรอกชื่ออุปกรณ์", "error");
+                return;
+            }
+
+            if (appState.rooms[roomId].devices[deviceName]) {
+                showToast(`อุปกรณ์ "${deviceName}" มีอยู่ในห้องนี้แล้ว`, "error");
+                return;
+            }
+
+            appState.rooms[roomId].devices[deviceName] = {
+                status: "ปกติ",
+                serial: serialNum,
+                remark: ""
+            };
+
+            appState.rooms[roomId].checked = true;
+            if (!appState.rooms[roomId].inspector) {
+                appState.rooms[roomId].inspector = "ปริญญา ศิริมนตรี";
+            }
+            if (!appState.rooms[roomId].date) {
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+                appState.rooms[roomId].date = localISOTime;
+            }
+
+            saveState();
+            closeAddDeviceModal();
+            renderChecklist();
+            renderSummaryTable();
+            updateStatistics();
+            updateChartData();
+            showToast(`เพิ่มอุปกรณ์ "${deviceName}" เรียบร้อยแล้ว`);
+        }
+
+        function filterRooms() {
+            appState.filterText = document.getElementById("room-search").value;
+            renderRooms();
+        }
+
+        function updateStatistics() {
+            let totalCheckedRooms = 0;
+            let normalCount = 0;
+            let brokenCount = 0;
+            let noneCount = 0;
+
+            const totalRooms = Object.keys(appState.rooms).length;
+
+            Object.values(appState.rooms).forEach(room => {
+                if (room.checked) {
+                    totalCheckedRooms++;
+                    Object.values(room.devices).forEach(dev => {
+                        if (dev.status === "ปกติ") normalCount++;
+                        else if (dev.status === "ชำรุด") brokenCount++;
+                        else if (dev.status === "ไม่มี TV" || dev.status === "ไม่มีอุปกรณ์" || dev.status === "ไม่มี" || dev.status === "ไม่มีโปรเจคเตอร์") noneCount++;
+                    });
+                }
+            });
+
+            document.getElementById("stat-rooms-checked").innerText = `${totalCheckedRooms} / ${totalRooms} ห้อง`;
+            const roomPercent = totalRooms > 0 ? (totalCheckedRooms / totalRooms) * 100 : 0;
+            document.getElementById("stat-rooms-bar").style.width = `${roomPercent}%`;
+
+            document.getElementById("stat-devices-normal").innerText = `${normalCount} เครื่อง`;
+            const totalDevicesRated = normalCount + brokenCount + noneCount;
+            const normalPercent = totalDevicesRated > 0 ? Math.round((normalCount / totalDevicesRated) * 100) : 0;
+            document.getElementById("stat-normal-percent").innerText = `พร้อมใช้งาน ${normalPercent}%`;
+
+            document.getElementById("stat-devices-broken").innerText = `${brokenCount} เครื่อง`;
+            const brokenPercent = totalDevicesRated > 0 ? Math.round((brokenCount / totalDevicesRated) * 100) : 0;
+            document.getElementById("stat-broken-percent").innerText = `อัตราชำรุด/ขัดข้อง ${brokenPercent}%`;
+
+            document.getElementById("stat-devices-none").innerText = `${noneCount} เครื่อง`;
+            const nonePercent = totalDevicesRated > 0 ? Math.round((noneCount / totalDevicesRated) * 100) : 0;
+            document.getElementById("stat-none-percent").innerText = `ยกเว้น/ไม่ได้ติดตั้ง ${nonePercent}%`;
+        }
+
+        function saveAndGoNext() {
+            const roomList = Object.keys(appState.rooms).sort();
+            if (roomList.length === 0) return;
+            const currentIndex = roomList.indexOf(appState.currentRoom);
+            let nextIndex = (currentIndex + 1) % roomList.length;
+            
+            triggerSaveBanner();
+            
+            setTimeout(() => {
+                selectRoom(roomList[nextIndex]);
+                showToast("เปิดหน้าต่างบันทึกห้องถัดไป: " + roomList[nextIndex]);
+            }, 300);
+        }
+
+        // Initialize Chart
+        function initChart() {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            
+            let normalCount = 0;
+            let brokenCount = 0;
+            let noneCount = 0;
+
+            Object.values(appState.rooms).forEach(room => {
+                if (room.checked) {
+                    Object.values(room.devices).forEach(dev => {
+                        if (dev.status === "ปกติ") normalCount++;
+                        else if (dev.status === "ชำรุด") brokenCount++;
+                        else if (dev.status === "ไม่มี TV" || dev.status === "ไม่มีอุปกรณ์" || dev.status === "ไม่มี" || dev.status === "ไม่มีโปรเจคเตอร์") noneCount++;
+                    });
+                }
+            });
+
+            if (normalCount === 0 && brokenCount === 0 && noneCount === 0) {
+                normalCount = 1; 
+            }
+
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ปกติ', 'ชำรุด', 'ไม่มีอุปกรณ์'],
+                    datasets: [{
+                        data: [normalCount, brokenCount, noneCount],
+                        backgroundColor: ['#10b981', '#ef4444', '#8b5cf6'],
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'Sarabun',
+                                    size: 11
+                                },
+                                boxWidth: 12
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function updateChartData() {
+            if (!statusChart) return;
+
+            let normalCount = 0;
+            let brokenCount = 0;
+            let noneCount = 0;
+
+            Object.values(appState.rooms).forEach(room => {
+                if (room.checked) {
+                    Object.values(room.devices).forEach(dev => {
+                        if (dev.status === "ปกติ") normalCount++;
+                        else if (dev.status === "ชำรุด") brokenCount++;
+                        else if (dev.status === "ไม่มี TV" || dev.status === "ไม่มีอุปกรณ์" || dev.status === "ไม่มี" || dev.status === "ไม่มีโปรเจคเตอร์") noneCount++;
+                    });
+                }
+            });
+
+            statusChart.data.datasets[0].data = [normalCount, brokenCount, noneCount];
+            statusChart.update();
+        }
+
+        function saveState() {
+            // Write current rooms buffer back to the termData repository
+            const currentKey = `${appState.currentYear}-${appState.currentSemester}`;
+            appState.termData[currentKey] = {
+                rooms: JSON.parse(JSON.stringify(appState.rooms))
+            };
+            localStorage.setItem('av_dashboard_state_v4', JSON.stringify(appState));
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById("toast");
+            const icon = document.getElementById("toast-icon");
+            const msgEl = document.getElementById("toast-message");
+
+            msgEl.innerText = message;
+            if (type === "success") {
+                icon.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+                icon.className = "text-emerald-400";
+            } else {
+                icon.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i>`;
+                icon.className = "text-red-400";
+            }
+
+            toast.classList.remove("translate-y-20", "opacity-0");
+            toast.classList.add("translate-y-0", "opacity-100");
+
+            setTimeout(() => {
+                toast.classList.remove("translate-y-0", "opacity-100");
+                toast.classList.add("translate-y-20", "opacity-0");
+            }, 3000);
+        }
+
+        function triggerSaveBanner() {
+            const banner = document.getElementById("save-status-msg");
+            if (banner) {
+                banner.classList.remove("opacity-0");
+                banner.classList.add("opacity-100");
+                setTimeout(() => {
+                    banner.classList.remove("opacity-100");
+                    banner.classList.add("opacity-0");
+                }, 2500);
+            }
+        }
+
+        function exportToJSON() {
+            // Quick force save to state before exporting
+            const currentKey = `${appState.currentYear}-${appState.currentSemester}`;
+            appState.termData[currentKey] = {
+                rooms: JSON.parse(JSON.stringify(appState.rooms))
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `AV_Inspection_Full_History_MSU_${new Date().toISOString().slice(0,10)}.json`);
+            dlAnchorElem.click();
+            showToast("ส่งออกข้อมูลประวัติการตรวจเช็คทุกเทอมแบบ JSON สำเร็จ");
+        }
+    </script>
+</body>
+</html>
